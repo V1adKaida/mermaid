@@ -1,6 +1,6 @@
 <script setup>
 import { VueFlow, useVueFlow, MarkerType } from "@vue-flow/core";
-import { nextTick, watch, ref } from "vue";
+import { nextTick, watch, ref, reactive, computed} from "vue";
 import Sidebar from "@/components/Sidebar.vue";
 
 let id = 0;
@@ -8,33 +8,21 @@ function getId() {
   return `dndnode_${id++}`;
 }
 
-const props = defineProps(['code'])
+const props = defineProps(['modelValue'])
+const emit = defineEmits(['update:modelValue', 'nodesPosition'])
+// const copyCode = ref(props.modelValue)
 
-// console.log(JSON.stringify(props.code, null, 2))
-const copyCode = ref(props.code)
-
-const initialElements = [
-  { id: '1', type: 'input', label: 'Node 1', position: { x: 250, y: 0 }, class: 'light' },
-  { id: '2', type: 'output', label: 'Node 2', position: { x: 100, y: 100 }, class: 'light' },
-  { id: '3', label: 'Node 3', position: { x: 400, y: 100 }, class: 'light' },
-  { id: '4', label: 'Node 4', position: { x: 150, y: 200 }, class: 'light' },
-  { id: '5', type: 'output', label: 'Node 5', position: { x: 300, y: 300 }, class: 'light' },
-  { id: 'e1-2', source: '1', target: '2', animated: true },
-  { id: 'e1-3', label: 'edge with arrowhead', source: '1', target: '3', markerEnd: MarkerType.ArrowClosed },
-  {
-    id: 'e4-5',
-    type: 'step',
-    label: 'step-edge',
-    source: '4',
-    target: '5',
-    style: { stroke: 'orange' },
-    labelBgStyle: { fill: 'orange' },
+const value = computed({
+  get() {
+    return props.modelValue
   },
-  { id: 'e3-4', type: 'smoothstep', label: 'smoothstep-edge', source: '3', target: '4' },
-]
+  set(value) {
+    console.log("set value", value)
+    emit('update:modelValue', value)
+  }
+})
 
-const elements = ref(initialElements)
-
+const defaultLabel = '-'
 const {
   onPaneReady,
   findNode,
@@ -42,10 +30,11 @@ const {
   onConnect,
   addEdges,
   addNodes,
+  getNode,
   project,
   vueFlowRef,
 } = useVueFlow({
-  nodes: elements
+  nodes: props.modelValue
 });
 
 onPaneReady(({ fitView }) => {
@@ -53,10 +42,12 @@ onPaneReady(({ fitView }) => {
   setTimeout(() => {
     fitView();
   }, 100);
-  console.log("pane ready");
 });
 
-onNodeDragStop((e) => console.log("drag stop", e));
+onNodeDragStop((e)=>{
+  console.log("drag stop", e.node)
+  emit('nodesPosition', e.node)
+});
 
 function onDragOver(event) {
   event.preventDefault();
@@ -105,20 +96,46 @@ function onDrop(event) {
 }
 
 onConnect((params) => addEdges([params]));
+
+const opts = reactive({
+  bg: '#eeeeee',
+  label: 'Node 1',
+  hidden: false,
+})
+
+function updateNode() {
+  const node = getNode.value('1')
+  node.label = opts.label.trim() !== '' ? opts.label : defaultLabel
+  node.style = { backgroundColor: opts.bg }
+  node.hidden = opts.hidden
+}
 </script>
 
 <template>
   <div class="dndflow" @drop="onDrop">
-
+    <!-- {{ value }} -->
     <Sidebar />
     <VueFlow
-      :v-model="copyCode"
+      v-model="value"
       class="basicflow"
+      fit-view-on-init
       :default-viewport="{ zoom: 1.5 }"
       :min-zoom="0.2"
       :max-zoom="4"
       @dragover="onDragOver"
     >
+    <div class="updatenode__controls">
+      <label>label:</label>
+      <input v-model="opts.label" @input="updateNode" />
+
+      <label class="updatenode__bglabel">background:</label>
+      <input v-model="opts.bg" type="color" @input="updateNode" />
+
+      <div class="updatenode__checkboxwrapper">
+        <label>hidden:</label>
+        <input v-model="opts.hidden" type="checkbox" @change="updateNode" />
+      </div>
+    </div>
     </VueFlow>
   </div>
 </template>
@@ -128,6 +145,10 @@ onConnect((params) => addEdges([params]));
 @import "https://cdn.jsdelivr.net/npm/@vue-flow/core@1.19.0/dist/theme-default.css";
 @import "https://cdn.jsdelivr.net/npm/@vue-flow/controls@latest/dist/style.css";
 @import "https://cdn.jsdelivr.net/npm/@vue-flow/node-resizer@latest/dist/style.css";
+
+.vue-flow__node{
+  word-break: break-word;
+}
 
 .basicflow.dark {
   background: #57534e;
@@ -208,4 +229,6 @@ onConnect((params) => addEdges([params]));
     gap: 5px;
   }
 }
+
+.updatenode__controls{position:absolute;right:10px;top:10px;z-index:4;font-size:11px;background-color:#d3d3d3;border-radius:10px;padding:8px}.updatenode__controls label{display:blocK}.updatenode__controls input{padding:2px;border-radius:5px}.updatenode__bglabel{margin-top:8px}.updatenode__checkboxwrapper{display:flex;justify-content:center;align-items:center;margin-top:8px}
 </style>

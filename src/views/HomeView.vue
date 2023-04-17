@@ -1,6 +1,5 @@
 <template>
-  <pre>{{ codeObj }}</pre><br><br>
-  <pre>{{ code }}</pre>
+  <!-- {{ codeObj }} -->
   <div class="wrapper">
     <div>
       <codemirror
@@ -12,36 +11,54 @@
         :tab-size="2"
         :extensions="extensions"
         @ready="handleReady"
-        @focus="log('focus', $event)"
-        @blur="log('blur', $event)"
       />
     </div>
     <div>
-      <blockScheme :code="codeObj"></blockScheme>
+      <VueFlow v-model="codeObj" @nodesPosition="nodesPosition"></VueFlow>
     </div>
   </div>
 </template>
 
 <script>
- import { ref, shallowRef } from 'vue'
+ import { ref, shallowRef,computed } from 'vue'
 import { Codemirror } from "vue-codemirror";
 import { json } from "@codemirror/lang-json";
 import { oneDark } from "@codemirror/theme-one-dark";
-import blockScheme from "../components/block-scheme.vue";
+import VueFlow from "../components/VueFlow.vue";
+import { MarkerType } from "@vue-flow/core";
 
 export default {
   name: "HomeView",
   components: {
-    blockScheme,
+    VueFlow,
     Codemirror,
   },
-
-  computed:{
-    codeObj(){
-      return JSON.stringify(this.code, null, 2)
-    }
-  },
   setup() {
+
+    const codeObj = computed({
+      // getter
+      get() {
+        return eval(code.value)
+      },
+      // setter
+      set(newValue) {
+        if (newValue !== code.value) {
+          const data = newValue.map(({ id, type, label, position, class: className }) => ({
+            id,
+            type,
+            label,
+            position,
+            class: className,
+          }));
+          code.value = JSON.stringify(data, null, 2);
+          console.log(data);
+        }
+      }
+    })
+
+    const nodesPosition = (nodes) => {
+      codeObj.value.map((node) => node.id === nodes.id).position = nodes.position;
+    }
 
     const code = ref(
       `[
@@ -74,21 +91,12 @@ export default {
       view.value = payload.view;
     };
 
-    // Status is available at all times via Codemirror EditorView
-    const getCodemirrorStates = () => {
-      const state = view.value.state;
-      const ranges = state.selection.ranges;
-      const selected = ranges.reduce((r, range) => r + range.to - range.from, 0);
-      const cursor = ranges[0].anchor;
-      const length = state.doc.length;
-      const lines = state.doc.lines;
-      // more state info ...
-      // return ...
-    };
     return {
       code,
+      codeObj,
       extensions,
       handleReady,
+      nodesPosition,
       log: console.log,
     };
   },
