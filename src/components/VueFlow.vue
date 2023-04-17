@@ -16,12 +16,10 @@ const value = computed({
     return props.modelValue
   },
   set(value) {
-    console.log('set value', value)
     emit('update:modelValue', value)
   }
 })
 
-const defaultLabel = '-'
 const {
   onPaneReady,
   findNode,
@@ -29,7 +27,9 @@ const {
   onConnect,
   addEdges,
   addNodes,
+  getSelectedElements,
   getNode,
+  getEdge,
   project,
   vueFlowRef
 } = useVueFlow({
@@ -44,7 +44,6 @@ onPaneReady(({ fitView }) => {
 })
 
 onNodeDragStop((e) => {
-  console.log('drag stop', e.node)
   emit('nodesPosition', e.node)
 })
 
@@ -101,18 +100,36 @@ const opts = reactive({
   label: 'Node 1',
   hidden: false
 })
+const defaultLabel = '-'
+let nodeId = 1
+
+function selectNode() {
+  const selected = getSelectedElements.value[0]
+  if (!selected) {
+    return
+  }
+  console.log('selectNode',  selected.id)
+  nodeId = selected.id
+  const node = nodeId.slice(0,1) !== 'e' ? getNode.value(nodeId) : getEdge.value(nodeId)
+  opts.label = node.label !== '' ? selected.label : ''
+  if (node.style) {
+    opts.bg = node.style.backgroundColor
+  } else {
+    opts.bg = '#ffffff'
+  }
+  opts.hidden = selected.hidden
+}
 
 function updateNode() {
-  const node = getNode.value('1')
-  node.label = opts.label.trim() !== '' ? opts.label : defaultLabel
+  const node = nodeId.slice(0,1) !== 'e' ? getNode.value(nodeId) : getEdge.value(nodeId)
+  node.label = opts.label !== '' ? opts.label : ''
   node.style = { backgroundColor: opts.bg }
   node.hidden = opts.hidden
 }
 </script>
 
 <template>
-  <div class="dndflow" @drop="onDrop">
-    <!-- {{ value }} -->
+  <div class="dndflow" @drop="onDrop" @click="selectNode">
     <Sidebar />
     <VueFlow
       v-model="value"
@@ -124,8 +141,7 @@ function updateNode() {
       @dragover="onDragOver"
     >
       <div class="updatenode__controls">
-        <label>label:</label>
-        <input v-model="opts.label" @input="updateNode" />
+        <input v-model="opts.label" @input="updateNode" placeholder="label" />
 
         <label class="updatenode__bglabel">background:</label>
         <input v-model="opts.bg" type="color" @input="updateNode" />
@@ -231,6 +247,8 @@ function updateNode() {
 
 .updatenode__controls {
   position: absolute;
+  display: flex;
+  align-items: center;
   right: 10px;
   top: 10px;
   z-index: 4;
@@ -241,18 +259,18 @@ function updateNode() {
 }
 .updatenode__controls label {
   display: blocK;
+  margin: 0 4px;
 }
 .updatenode__controls input {
   padding: 2px;
   border-radius: 5px;
 }
 .updatenode__bglabel {
-  margin-top: 8px;
+  margin: 0 4px;
 }
 .updatenode__checkboxwrapper {
   display: flex;
   justify-content: center;
   align-items: center;
-  margin-top: 8px;
 }
 </style>

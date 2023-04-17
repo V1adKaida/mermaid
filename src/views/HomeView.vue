@@ -5,7 +5,7 @@
       <Codemirror
         v-model="code"
         placeholder="Code goes here..."
-        :style="{ height: '400px' }"
+        :style="{ height: '100%' }"
         :autofocus="true"
         :indent-with-tab="true"
         :tab-size="2"
@@ -41,16 +41,19 @@ export default {
       },
       // setter
       set(newValue) {
-        if (newValue !== code.value) {
-          const data = newValue.map(({ id, type, label, position, class: className }) => ({
-            id,
-            type,
-            label,
-            position,
-            class: className
-          }))
-          code.value = JSON.stringify(data, null, 2)
-          console.log(data)
+        if (newValue !== eval(code.value)) {
+          if (typeof newValue === 'string') {
+            eval(newValue)
+          } else {
+            const data = newValue.map(({ id, type, label, position, class: className }) => ({
+              id,
+              type,
+              label,
+              position,
+              class: className
+            }))
+            code.value = JSON.stringify(data, null, 2)
+          }
         }
       }
     })
