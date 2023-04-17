@@ -2,7 +2,7 @@
   <!-- {{ codeObj }} -->
   <div class="wrapper">
     <div>
-      <codemirror
+      <Codemirror
         v-model="code"
         placeholder="Code goes here..."
         :style="{ height: '400px' }"
@@ -14,27 +14,26 @@
       />
     </div>
     <div>
-      <VueFlow v-model="codeObj" @nodesPosition="nodesPosition"></VueFlow>
+      <VueFlow v-model="codeObj" @nodes-position="nodesPosition"></VueFlow>
     </div>
   </div>
 </template>
 
 <script>
- import { ref, shallowRef,computed } from 'vue'
-import { Codemirror } from "vue-codemirror";
-import { json } from "@codemirror/lang-json";
-import { oneDark } from "@codemirror/theme-one-dark";
-import VueFlow from "../components/VueFlow.vue";
-import { MarkerType } from "@vue-flow/core";
+import { ref, shallowRef, computed } from 'vue'
+import { Codemirror } from 'vue-codemirror'
+import { json } from '@codemirror/lang-json'
+import { oneDark } from '@codemirror/theme-one-dark'
+import VueFlow from '../components/VueFlow.vue'
+import { MarkerType } from '@vue-flow/core'
 
 export default {
-  name: "HomeView",
+  name: 'HomeView',
   components: {
     VueFlow,
-    Codemirror,
+    Codemirror
   },
   setup() {
-
     const codeObj = computed({
       // getter
       get() {
@@ -48,16 +47,16 @@ export default {
             type,
             label,
             position,
-            class: className,
-          }));
-          code.value = JSON.stringify(data, null, 2);
-          console.log(data);
+            class: className
+          }))
+          code.value = JSON.stringify(data, null, 2)
+          console.log(data)
         }
       }
     })
 
     const nodesPosition = (nodes) => {
-      codeObj.value.map((node) => node.id === nodes.id).position = nodes.position;
+      codeObj.value.map((node) => node.id === nodes.id).position = nodes.position
     }
 
     const code = ref(
@@ -81,15 +80,15 @@ export default {
   { id: 'e3-4', type: 'smoothstep', label: 'smoothstep-edge', source: '3', target: '4' },
 ]
 `
-    );
+    )
 
-    const extensions = [json(), oneDark];
+    const extensions = [json(), oneDark]
 
     // Codemirror EditorView instance ref
-    const view = shallowRef();
+    const view = shallowRef()
     const handleReady = (payload) => {
-      view.value = payload.view;
-    };
+      view.value = payload.view
+    }
 
     return {
       code,
@@ -97,10 +96,10 @@ export default {
       extensions,
       handleReady,
       nodesPosition,
-      log: console.log,
-    };
-  },
-};
+      log: console.log
+    }
+  }
+}
 </script>
 
 <style lang="scss">
