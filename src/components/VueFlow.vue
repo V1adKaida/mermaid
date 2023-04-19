@@ -1,130 +1,149 @@
 <script setup>
-import { VueFlow, useVueFlow, MarkerType } from '@vue-flow/core'
-import { nextTick, watch, reactive, computed } from 'vue'
-import Sidebar from '@/components/Sidebar.vue'
+import { VueFlow, useVueFlow } from "@vue-flow/core";
+import { nextTick, watch, reactive, computed } from "vue";
+import Sidebar from "@/components/Sidebar.vue";
+import console from 'console';
 
-let id = 0
+let id = 0;
 function getId() {
-  return `dndnode_${id++}`
+  return `dndnode_${id++}`;
 }
 
-const props = defineProps(['modelValue'])
-const emit = defineEmits(['update:modelValue', 'nodesPosition'])
+const props = defineProps(["modelValue"]);
+const emit = defineEmits(["update:modelValue", "nodesPosition"]);
 
-const value = computed({
+const vueFlowValue = computed({
   get() {
-    return props.modelValue
+    return props.modelValue;
   },
   set(value) {
-    emit('update:modelValue', value)
-  }
-})
+    if (value !== vueFlowValue.value) {
+      // console.log("vueFlowValue set", value);
+      emit("update:modelValue", value);
+    }
+  },
+});
 
 const {
   onPaneReady,
   findNode,
   onNodeDragStop,
   onConnect,
+  onEdgeUpdate,
+  updateEdge,
   addEdges,
   addNodes,
   getSelectedElements,
   getNode,
   getEdge,
   project,
-  vueFlowRef
+  vueFlowRef,
 } = useVueFlow({
-  nodes: props.modelValue
-})
+  nodes: vueFlowValue.value,
+});
 
 onPaneReady(({ fitView }) => {
-  fitView()
+  fitView();
   setTimeout(() => {
-    fitView()
-  }, 100)
-})
+    fitView();
+  }, 100);
+});
 
 onNodeDragStop((e) => {
-  emit('nodesPosition', e.node)
-})
+  emit("nodesPosition", e.node);
+});
 
 function onDragOver(event) {
-  event.preventDefault()
-
+  event.preventDefault();
   if (event.dataTransfer) {
-    event.dataTransfer.dropEffect = 'move'
+    event.dataTransfer.dropEffect = "move";
   }
 }
 
 function onDrop(event) {
-  const type = event.dataTransfer?.getData('application/vueflow')
+  const type = event.dataTransfer?.getData("application/vueflow");
 
-  const { left, top } = vueFlowRef.value.getBoundingClientRect()
+  const { left, top } = vueFlowRef.value.getBoundingClientRect();
 
   const position = project({
     x: event.clientX - left,
-    y: event.clientY - top
-  })
+    y: event.clientY - top,
+  });
 
   const newNode = {
     id: getId(),
     type,
     position,
-    label: `${type} node`
-  }
+    label: `${type} node`,
+  };
 
-  addNodes([newNode])
+  addNodes([newNode]);
 
   // align node position after drop, so it's centered to the mouse
   nextTick(() => {
-    const node = findNode(newNode.id)
+    const node = findNode(newNode.id);
     const stop = watch(
       () => node.dimensions,
       (dimensions) => {
         if (dimensions.width > 0 && dimensions.height > 0) {
           node.position = {
             x: node.position.x - node.dimensions.width / 2,
-            y: node.position.y - node.dimensions.height / 2
-          }
-          stop()
+            y: node.position.y - node.dimensions.height / 2,
+          };
+          stop();
         }
       },
-      { deep: true, flush: 'post' }
-    )
-  })
+      { deep: true, flush: "post" }
+    );
+  });
 }
 
-onConnect((params) => addEdges([params]))
+onConnect((params) => addEdges([params]));
+onEdgeUpdate(({ edge, connection }) => updateEdge(edge, connection))
 
 const opts = reactive({
-  bg: '#eeeeee',
-  label: 'Node 1',
-  hidden: false
-})
-const defaultLabel = '-'
-let nodeId = 1
+  bg: "#ffffff",
+  label: "Node 1",
+  hidden: false,
+});
+let nodeId = '1';
+let nodeAnimated = false;
 
 function selectNode() {
-  const selected = getSelectedElements.value[0]
+  const selected = getSelectedElements.value[0];
   if (!selected) {
-    return
+    return;
   }
-  console.log('selectNode',  selected.id)
-  nodeId = selected.id
-  const node = nodeId.slice(0,1) !== 'e' ? getNode.value(nodeId) : getEdge.value(nodeId)
-  opts.label = node.label !== '' ? selected.label : ''
+  nodeId = selected.id;
+  const node = nodeId.slice(0, 1) !== "e" ? getNode.value(nodeId) : getEdge.value(nodeId);
+  // console.log("selectNode", node);
+  opts.label = node.label !== "" ? selected.label : "";
   if (node.style) {
-    opts.bg = node.style.backgroundColor
+    opts.bg = node.style.backgroundColor;
   } else {
-    opts.bg = '#ffffff'
+    opts.bg = "#ffffff";
   }
-  opts.hidden = selected.hidden
+  opts.hidden = selected.hidden;
+  if (nodeId.slice(0, 1) === "e") {
+    nodeAnimated = true;
+    opts.animated = selected.animated || false;
+  } else {
+    nodeAnimated = false;
+  }
 }
 
 function updateNode() {
-  const node = nodeId.slice(0,1) !== 'e' ? getNode.value(nodeId) : getEdge.value(nodeId)
-  node.label = opts.label !== '' ? opts.label : ''
-  node.style = { backgroundColor: opts.bg }
-  node.hidden = opts.hidden
+  const nodeStyles = nodeId.slice(0, 1) !== "e" ? getNode.value(nodeId) : getEdge.value(nodeId);
+  nodeStyles.style = { backgroundColor: opts.bg };
+  nodeStyles.hidden = opts.hidden;
+
+  vueFlowValue.value = vueFlowValue.value.map((node) => {
+    if (node.id === nodeId) {
+      node.label = opts.label !== "" ? opts.label : "";
+      node.animated = opts.animated;
+    }
+    return node
+  });
 }
 </script>
 
@@ -132,8 +151,9 @@ function updateNode() {
   <div class="dndflow" @drop="onDrop" @click="selectNode">
     <Sidebar />
     <VueFlow
-      v-model="value"
+      v-model="vueFlowValue"
       class="basicflow"
+      :edges-updatable="true"
       fit-view-on-init
       :default-viewport="{ zoom: 1.5 }"
       :min-zoom="0.2"
@@ -141,25 +161,34 @@ function updateNode() {
       @dragover="onDragOver"
     >
       <div class="updatenode__controls">
-        <input v-model="opts.label" @input="updateNode" placeholder="label" />
+       <div>
+         <input v-model="opts.label" @input="updateNode" placeholder="label" />
+       </div>
 
-        <label class="updatenode__bglabel">background:</label>
+        <div>
+          <label class="updatenode__bglabel">background:</label>
         <input v-model="opts.bg" type="color" @input="updateNode" />
+        </div>
 
         <div class="updatenode__checkboxwrapper">
           <label>hidden:</label>
           <input v-model="opts.hidden" type="checkbox" @change="updateNode" />
+        </div>
+
+         <div class="updatenode__checkboxwrapper" v-if="nodeAnimated">
+          <label>animated:</label>
+          <input v-model="opts.animated" type="checkbox" @change="updateNode" />
         </div>
       </div>
     </VueFlow>
   </div>
 </template>
 
-<style>
-@import 'https://cdn.jsdelivr.net/npm/@vue-flow/core@1.19.0/dist/style.css';
-@import 'https://cdn.jsdelivr.net/npm/@vue-flow/core@1.19.0/dist/theme-default.css';
-@import 'https://cdn.jsdelivr.net/npm/@vue-flow/controls@latest/dist/style.css';
-@import 'https://cdn.jsdelivr.net/npm/@vue-flow/node-resizer@latest/dist/style.css';
+<style lang="scss">
+@import "https://cdn.jsdelivr.net/npm/@vue-flow/core@1.19.0/dist/style.css";
+@import "https://cdn.jsdelivr.net/npm/@vue-flow/core@1.19.0/dist/theme-default.css";
+@import "https://cdn.jsdelivr.net/npm/@vue-flow/controls@latest/dist/style.css";
+@import "https://cdn.jsdelivr.net/npm/@vue-flow/node-resizer@latest/dist/style.css";
 
 .vue-flow__node {
   word-break: break-word;
@@ -249,6 +278,7 @@ function updateNode() {
   position: absolute;
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   right: 10px;
   top: 10px;
   z-index: 4;
@@ -256,10 +286,18 @@ function updateNode() {
   background-color: #d3d3d3;
   border-radius: 10px;
   padding: 8px;
+  padding-bottom: 0;
+
+  >div{
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+  }
 }
 .updatenode__controls label {
   display: blocK;
-  margin: 0 4px;
+  margin-right: 4px;
+  margin-left: 8px;
 }
 .updatenode__controls input {
   padding: 2px;

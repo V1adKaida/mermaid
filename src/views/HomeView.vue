@@ -1,5 +1,4 @@
 <template>
-  <!-- {{ codeObj }} -->
   <div class="wrapper">
     <div>
       <Codemirror
@@ -20,77 +19,163 @@
 </template>
 
 <script>
-import { ref, shallowRef, computed } from 'vue'
-import { Codemirror } from 'vue-codemirror'
-import { json } from '@codemirror/lang-json'
-import { oneDark } from '@codemirror/theme-one-dark'
-import VueFlow from '../components/VueFlow.vue'
-import { MarkerType } from '@vue-flow/core'
+import { ref, shallowRef, computed, reactive } from "vue";
+import { Codemirror } from "vue-codemirror";
+import { json } from "@codemirror/lang-json";
+import { oneDark } from "@codemirror/theme-one-dark";
+import VueFlow from "../components/VueFlow.vue";
 
 export default {
-  name: 'HomeView',
+  name: "HomeView",
   components: {
     VueFlow,
-    Codemirror
+    Codemirror,
   },
   setup() {
-    const codeObj = computed({
-      // getter
-      get() {
-        return eval(code.value)
-      },
-      // setter
-      set(newValue) {
-        if (newValue !== eval(code.value)) {
-          if (typeof newValue === 'string') {
-            eval(newValue)
-          } else {
-            const data = newValue.map(({ id, type, label, position, class: className }) => ({
-              id,
-              type,
-              label,
-              position,
-              class: className
-            }))
-            code.value = JSON.stringify(data, null, 2)
-          }
-        }
-      }
-    })
+    const extensions = [json(), oneDark];
 
-    const nodesPosition = (nodes) => {
-      codeObj.value.map((node) => node.id === nodes.id).position = nodes.position
-    }
+    // Codemirror EditorView instance ref
+    const view = shallowRef();
+    const handleReady = (payload) => {
+      view.value = payload.view;
+    };
 
-    const code = ref(
+        const code = ref(
       `[
-  { id: '1', type: 'input', label: 'Node 1', position: { x: 250, y: 0 }, class: 'light' },
-  { id: '2', type: 'output', label: 'Node 2', position: { x: 100, y: 100 }, class: 'light' },
-  { id: '3', label: 'Node 3', position: { x: 400, y: 100 }, class: 'light' },
-  { id: '4', label: 'Node 4', position: { x: 150, y: 200 }, class: 'light' },
-  { id: '5', type: 'output', label: 'Node 5', position: { x: 300, y: 300 }, class: 'light' },
-  { id: 'e1-2', source: '1', target: '2', animated: true },
-  { id: 'e1-3', label: 'edge with arrowhead', source: '1', target: '3', markerEnd: MarkerType.ArrowClosed },
+  {
+    id: '1',
+    type: 'input',
+    label: 'Node 1',
+    position: {
+      x: 250,
+      y: 1
+    },
+    class: 'light'
+  },
+  {
+    id: '2',
+    type: 'output',
+    label: 'Node 2',
+    position: {
+      x: 100,
+      y: 100
+    },
+    class: 'light'
+  },
+  {
+    id: '3',
+    label: 'Node 3',
+    position: {
+      x: 400,
+      y: 100
+    },
+    class: 'light'
+  },
+  {
+    id: '4',
+    label: 'Node 4',
+    position: {
+      x: 150,
+      y: 200
+    },
+    class: 'light'
+  },
+  {
+    id: '5',
+    type: 'output',
+    label: 'Node 5',
+    position: {
+      x: 300,
+      y: 300
+    },
+    class: 'light'
+  },
+  {
+    id: 'e1-2',
+    source: '1',
+    target: '2',
+    animated: true
+  },
+  {
+    id: 'e1-3',
+    label: 'edge with arrowhead',
+    source: '1',
+    target: '3'
+  },
   {
     id: 'e4-5',
     type: 'step',
     label: 'step-edge',
     source: '4',
     target: '5',
-    style: { stroke: 'orange' },
-    labelBgStyle: { fill: 'orange' },
+    style: {
+      stroke: 'orange'
+    },
+    labelBgStyle: {
+      fill: 'orange'
+    }
   },
-  { id: 'e3-4', type: 'smoothstep', label: 'smoothstep-edge', source: '3', target: '4' },
+  {
+    id: 'e3-4',
+    type: 'smoothstep',
+    label: 'smoothstep-edge',
+    source: '3',
+    target: '4'
+  }
 ]
 `
-    )
+    );
 
-    const extensions = [json(), oneDark]
+    const codeObj = computed({
+      // getter
+      get() {
+        return eval(code.value);
+      },
+      // setter
+      set(newValue) {
+        if (newValue !== eval(code.value)) {
+          if (typeof newValue === "string") {
+            eval(newValue);
+          } else {
+            console.log('codeObj', newValue);
+            newValue.forEach(element => {
+              
+            });
+            const data = newValue.map((element)=>{
+              return {
+                id: element.id,
+                type: element.type,
+                label: element.label,
+                position: element.position,
+                animated: element.animated,
+                style: element.style,
+                labelBgStyle: element.labelBgStyle,
+                source: element.source,
+                taeget: element.taeget,
+                class: element.class,
+              }
+            })
+            // code.value = JSON.stringify(data, null, 2)
+            //   .replace(/"(\w+)"\s*:/g, "$1:")
+            //   .replace(/["]/g, "'");
+          }
+        }
+      },
+    });
 
-    // Codemirror EditorView instance ref
-    const view = shallowRef()
-    const handleReady = (payload) => {
-      view.value = payload.view
+    function nodesPosition(nodes) {
+      const data = codeObj.value.map((node) => {
+        if (node.id === nodes.id) {
+          node.position = {
+            x: Math.round(nodes.position.x),
+            y: Math.round(nodes.position.y),
+          };
+        }
+        return node;
+      });
+      code.value = JSON.stringify(data, null, 2)
+        .replace(/"(\w+)"\s*:/g, "$1:")
+        .replace(/["]/g, "'");
     }
 
     return {
@@ -99,10 +184,10 @@ export default {
       extensions,
       handleReady,
       nodesPosition,
-      log: console.log
-    }
-  }
-}
+      log: console.log,
+    };
+  },
+};
 </script>
 
 <style lang="scss">
