@@ -1,5 +1,6 @@
 <script setup>
 import { VueFlow, useVueFlow } from "@vue-flow/core";
+import { Background } from '@vue-flow/background'
 import { nextTick, watch, reactive, computed, onMounted } from "vue";
 import Sidebar from "@/components/Sidebar.vue";
 
@@ -12,7 +13,7 @@ const props = defineProps(["modelValue"]);
 const emit = defineEmits(["update:modelValue"]);
 
 const vueFlowValue = computed({
-  get() {
+  get() {  
     return props.modelValue;
   },
   set(value) {
@@ -32,6 +33,7 @@ const vueFlowValue = computed({
           labelBgStyle: node.labelBgStyle,
         };
       });
+
       const newValue = JSON.stringify(data, null, 2)
         .replace(/"(\w+)"\s*:/g, "$1:")
         .replace(/["]/g, "'");
@@ -52,6 +54,25 @@ const vueFlowValue = computed({
   },
 });
 
+watch(
+  () => vueFlowValue.value,
+  (newValue) => {
+    if (newValue) {
+      vueFlowValue.value = newValue.map((node) => {
+        if (node.position === undefined) {
+          node.position = {
+            x: Math.random() * dimensions.value.width, 
+            y: Math.random() * dimensions.value.height
+          };
+        }
+
+        return node;
+      });
+    }
+  },
+  { deep: true }
+);
+
 const {
   onPaneReady,
   findNode,
@@ -65,7 +86,7 @@ const {
   getElements,
   project,
   vueFlowRef,
-  getEdgeTypes,
+  dimensions
 } = useVueFlow({
   // nodes: vueFlowValue.value,
 });
@@ -188,7 +209,7 @@ function selectNode() {
   } else {
     edgeType = false;
   }
-  console.log(selected)
+  
   opts.label = selected.label ? selected.label : "";
   opts.hidden = selected.hidden;
   opts.bg = selected.style ? selected.style.backgroundColor : "";
@@ -238,15 +259,16 @@ function updateNode(name) {
     <VueFlow
       v-model="vueFlowValue"
       :only-render-visible-elements="true"
+      fit-view-on-init
       class="basicflow"
       :edges-updatable="true"
       :zoom-on-double-click="false"
-      fit-view-on-init
       :default-viewport="{ zoom: 1.5 }"
       :min-zoom="0.2"
       :max-zoom="4"
       @dragover="onDragOver"
     >
+      <Background />
       <div class="updatenode__controls">
         <div>
           <input v-model="opts.label" @input="updateNode('label')" placeholder="label" />

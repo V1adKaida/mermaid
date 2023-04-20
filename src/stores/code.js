@@ -1,8 +1,9 @@
 import { defineStore } from 'pinia'
 
 export const useCodeStore = defineStore('code', {
-  state: () => ({
-    code: `[
+  state: () => {
+    return {
+      code: `[
     {
     id: '1',
     type: 'input',
@@ -85,6 +86,7 @@ export const useCodeStore = defineStore('code', {
   }
   ]
   `
-  }),
+    }
+  },
   persist: true,
 })

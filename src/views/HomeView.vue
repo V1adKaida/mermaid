@@ -4,7 +4,7 @@
     <div>
       <Codemirror
         :modelValue="code"
-        @update:modelValue="newValue => code = newValue"
+        @update:modelValue="(newValue) => (code = newValue)"
         placeholder="Code goes here..."
         :style="{ height: '100%' }"
         :autofocus="true"
@@ -12,8 +12,8 @@
         :tab-size="2"
         :extensions="extensions"
         @ready="handleReady"
-        @focus="permision = false;"
-        @blur="permision = true;"
+        @focus="permision = false"
+        @blur="permision = true"
       />
     </div>
     <div>
@@ -134,12 +134,29 @@ export default {
 
     const codeObj = computed({
       get() {
-        return eval(code.value);
+        const validator = () => {
+          try {
+            eval(code.value);
+            return true;
+          } catch (e) {
+            return false;
+          }
+        };
+
+        if (validator() === true) {
+          const validateId = eval(code.value).every((item) => {
+            return item.id;
+          });
+
+          if (validateId) {
+            return eval(code.value);
+          }
+        }
       },
       set(newValue) {
         if (permision.value) {
           if (newValue !== code.value) {
-          code.value = newValue
+            code.value = newValue;
           }
         }
       },
