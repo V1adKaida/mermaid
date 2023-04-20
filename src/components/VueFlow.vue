@@ -1,16 +1,15 @@
 <script setup>
 import { VueFlow, useVueFlow } from "@vue-flow/core";
-import { nextTick, watch, reactive, computed } from "vue";
+import { nextTick, watch, reactive, computed, onMounted } from "vue";
 import Sidebar from "@/components/Sidebar.vue";
-import console from 'console';
 
 let id = 0;
 function getId() {
-  return `dndnode_${id++}`;
+  return `dnd${id++}`;
 }
 
 const props = defineProps(["modelValue"]);
-const emit = defineEmits(["update:modelValue", "nodesPosition"]);
+const emit = defineEmits(["update:modelValue"]);
 
 const vueFlowValue = computed({
   get() {
@@ -18,8 +17,37 @@ const vueFlowValue = computed({
   },
   set(value) {
     if (value !== vueFlowValue.value) {
-      // console.log("vueFlowValue set", value);
-      emit("update:modelValue", value);
+      const data = value.map((node) => {
+        return {
+          id: node.id,
+          type: node.type,
+          label: node.label,
+          position: node.position,
+          style: node.style,
+          class: node.Class,
+          hidden: node.hidden,
+          animated: node.animated,
+          source: node.source,
+          target: node.target,
+          labelBgStyle: node.labelBgStyle,
+        };
+      });
+      const newValue = JSON.stringify(data, null, 2)
+        .replace(/"(\w+)"\s*:/g, "$1:")
+        .replace(/["]/g, "'");
+
+      emit("update:modelValue", newValue);
+
+      value.map((node) => {
+        if (node.id === nodeId) {
+          opts.bg = node.style?.background;
+          opts.stroke = node.style?.stroke;
+          opts.type = node.type;
+          opts.labelBgStyle.fill = node.labelBgStyle?.fill;
+          opts.label = node.label;
+          opts.hidden = node.hidden;
+        }
+      });
     }
   },
 });
@@ -34,12 +62,12 @@ const {
   addEdges,
   addNodes,
   getSelectedElements,
-  getNode,
-  getEdge,
+  getElements,
   project,
   vueFlowRef,
+  getEdgeTypes,
 } = useVueFlow({
-  nodes: vueFlowValue.value,
+  // nodes: vueFlowValue.value,
 });
 
 onPaneReady(({ fitView }) => {
@@ -50,7 +78,16 @@ onPaneReady(({ fitView }) => {
 });
 
 onNodeDragStop((e) => {
-  emit("nodesPosition", e.node);
+  const nodes = e.node;
+  vueFlowValue.value = vueFlowValue.value.map((node) => {
+    if (node.id === nodes.id) {
+      node.position = {
+        x: Math.round(nodes.position.x),
+        y: Math.round(nodes.position.y),
+      };
+    }
+    return node;
+  });
 });
 
 function onDragOver(event) {
@@ -99,15 +136,46 @@ function onDrop(event) {
 }
 
 onConnect((params) => addEdges([params]));
-onEdgeUpdate(({ edge, connection }) => updateEdge(edge, connection))
+onEdgeUpdate(({ edge, connection }) => updateEdge(edge, connection));
 
 const opts = reactive({
-  bg: "#ffffff",
-  label: "Node 1",
-  hidden: false,
+  bg: null,
+  stroke: null,
+  type: null,
+  labelBgStyle: { fill: null},
+  label: null,
+  hidden: null,
 });
-let nodeId = '1';
-let nodeAnimated = false;
+let nodeId = "1";
+let edgeType = false;
+
+onMounted(() => {
+  const nodes = getElements.value;
+  nodes.map((node) => {
+    if (node.id === nodeId ){
+      if(nodeId.slice(0, 1) === "e" || nodeId.slice(0, 1) === "v") {
+        edgeType = true
+      } else {
+        edgeType = false;
+      }
+      opts.label = node.label ? node.label : "";
+      opts.hidden = node.hidden;
+      if (node.style) {
+        opts.bg = node.style.backgroundColor;
+      }
+      if (edgeType) {
+        if(node.labelBgStyle) {
+          opts.labelBgStyle.fill = node.labelBgStyle.fill ? node.labelBgStyle.fill : "";
+        }
+        opts.animated = node.animated ? node.animated : false;
+        opts.type = node.type ? node.type : "default";
+        if (node.style){
+          opts.stroke = node.style.stroke ? node.style.stroke : "";
+        }
+      }
+    }
+  })
+})
 
 function selectNode() {
   const selected = getSelectedElements.value[0];
@@ -115,34 +183,51 @@ function selectNode() {
     return;
   }
   nodeId = selected.id;
-  const node = nodeId.slice(0, 1) !== "e" ? getNode.value(nodeId) : getEdge.value(nodeId);
-  // console.log("selectNode", node);
-  opts.label = node.label !== "" ? selected.label : "";
-  if (node.style) {
-    opts.bg = node.style.backgroundColor;
+  if(nodeId.slice(0, 1) === "e" || nodeId.slice(0, 1) === "v") {
+    edgeType = true
   } else {
-    opts.bg = "#ffffff";
+    edgeType = false;
   }
+  console.log(selected)
+  opts.label = selected.label ? selected.label : "";
   opts.hidden = selected.hidden;
-  if (nodeId.slice(0, 1) === "e") {
-    nodeAnimated = true;
-    opts.animated = selected.animated || false;
-  } else {
-    nodeAnimated = false;
+  opts.bg = selected.style ? selected.style.backgroundColor : "";
+
+  if (edgeType) {
+    opts.labelBgStyle.fill = selected.labelBgStyle ? selected.labelBgStyle.fill : "";
+    opts.animated = selected.animated ? selected.animated : false;
+    opts.type = selected.type ? selected.type : "default";
+    opts.stroke = selected.style ? selected.style.stroke : "";
   }
 }
-
-function updateNode() {
-  const nodeStyles = nodeId.slice(0, 1) !== "e" ? getNode.value(nodeId) : getEdge.value(nodeId);
-  nodeStyles.style = { backgroundColor: opts.bg };
-  nodeStyles.hidden = opts.hidden;
-
+function updateNode(name) {
   vueFlowValue.value = vueFlowValue.value.map((node) => {
     if (node.id === nodeId) {
-      node.label = opts.label !== "" ? opts.label : "";
-      node.animated = opts.animated;
+      if(name === "label") {
+        node.label = opts.label !== "" ? opts.label : "";
+      }
+      if(name === "bg") {
+        node.style = { backgroundColor: opts.bg };
+      }
+      if(name === "hidden") {
+        node.hidden = opts.hidden;
+      }
+      if (edgeType) {
+        if(name === "stroke") {
+          node.style = { stroke: opts.stroke };
+        }
+        if(name === "labelBgStyle") {
+          node.labelBgStyle = { fill: opts.labelBgStyle.fill };
+        }
+        if(name === "animated") {
+          node.animated = opts.animated;
+        }
+        if(name === "type") {
+          node.type = opts.type;
+        }
+      }
     }
-    return node
+    return node;
   });
 }
 </script>
@@ -152,8 +237,10 @@ function updateNode() {
     <Sidebar />
     <VueFlow
       v-model="vueFlowValue"
+      :only-render-visible-elements="true"
       class="basicflow"
       :edges-updatable="true"
+      :zoom-on-double-click="false"
       fit-view-on-init
       :default-viewport="{ zoom: 1.5 }"
       :min-zoom="0.2"
@@ -161,23 +248,42 @@ function updateNode() {
       @dragover="onDragOver"
     >
       <div class="updatenode__controls">
-       <div>
-         <input v-model="opts.label" @input="updateNode" placeholder="label" />
-       </div>
-
         <div>
+          <input v-model="opts.label" @input="updateNode('label')" placeholder="label" />
+        </div>
+
+        <div v-if="!edgeType">
           <label class="updatenode__bglabel">background:</label>
-        <input v-model="opts.bg" type="color" @input="updateNode" />
+          <input v-model="opts.bg" type="color" @input="updateNode('bg')" />
+        </div>
+
+        <div v-if="edgeType">
+          <label class="updatenode__bglabel">storke:</label>
+          <input v-model="opts.stroke" type="color" @input="updateNode('stroke')" />
+        </div>
+
+        <div v-if="edgeType && opts.labelBgStyle">
+          <label class="updatenode__bglabel">labelBgStyle:</label>
+          <input v-model="opts.labelBgStyle.fill" type="color" @input="updateNode('labelBgStyle')" />
+        </div>
+
+        <div v-if="edgeType">
+          <label class="updatenode__bglabel">type:</label>
+          <select v-model="opts.type" @change="updateNode('type')">
+            <option value="default">default</option>
+            <option value="smoothstep">smoothstep</option>
+            <option value="step">step</option>
+          </select>
         </div>
 
         <div class="updatenode__checkboxwrapper">
           <label>hidden:</label>
-          <input v-model="opts.hidden" type="checkbox" @change="updateNode" />
+          <input v-model="opts.hidden" type="checkbox" @change="updateNode('hidden')" />
         </div>
 
-         <div class="updatenode__checkboxwrapper" v-if="nodeAnimated">
+        <div class="updatenode__checkboxwrapper" v-if="edgeType">
           <label>animated:</label>
-          <input v-model="opts.animated" type="checkbox" @change="updateNode" />
+          <input v-model="opts.animated" type="checkbox" @change="updateNode('animated')" />
         </div>
       </div>
     </VueFlow>
@@ -185,10 +291,11 @@ function updateNode() {
 </template>
 
 <style lang="scss">
-@import "https://cdn.jsdelivr.net/npm/@vue-flow/core@1.19.0/dist/style.css";
-@import "https://cdn.jsdelivr.net/npm/@vue-flow/core@1.19.0/dist/theme-default.css";
-@import "https://cdn.jsdelivr.net/npm/@vue-flow/controls@latest/dist/style.css";
-@import "https://cdn.jsdelivr.net/npm/@vue-flow/node-resizer@latest/dist/style.css";
+/* import the required styles */
+@import "@vue-flow/core/dist/style.css";
+
+/* import the default theme (optional) */
+@import "@vue-flow/core/dist/theme-default.css";
 
 .vue-flow__node {
   word-break: break-word;
@@ -288,7 +395,7 @@ function updateNode() {
   padding: 8px;
   padding-bottom: 0;
 
-  >div{
+  > div {
     margin-bottom: 8px;
     display: flex;
     align-items: center;

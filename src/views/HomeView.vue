@@ -1,8 +1,10 @@
 <template>
+  <!-- {{ codeObj }} -->
   <div class="wrapper">
     <div>
       <Codemirror
-        v-model="code"
+        :modelValue="code"
+        @update:modelValue="newValue => code = newValue"
         placeholder="Code goes here..."
         :style="{ height: '100%' }"
         :autofocus="true"
@@ -10,16 +12,18 @@
         :tab-size="2"
         :extensions="extensions"
         @ready="handleReady"
+        @focus="permision = false;"
+        @blur="permision = true;"
       />
     </div>
     <div>
-      <VueFlow v-model="codeObj" @nodes-position="nodesPosition"></VueFlow>
+      <VueFlow v-model="codeObj"></VueFlow>
     </div>
   </div>
 </template>
 
 <script>
-import { ref, shallowRef, computed, reactive } from "vue";
+import { ref, shallowRef, computed } from "vue";
 import { Codemirror } from "vue-codemirror";
 import { json } from "@codemirror/lang-json";
 import { oneDark } from "@codemirror/theme-one-dark";
@@ -40,7 +44,7 @@ export default {
       view.value = payload.view;
     };
 
-        const code = ref(
+    const code = ref(
       `[
   {
     id: '1',
@@ -109,10 +113,10 @@ export default {
     source: '4',
     target: '5',
     style: {
-      stroke: 'orange'
+      stroke: '#ffa500'
     },
     labelBgStyle: {
-      fill: 'orange'
+      fill: '#ffa500'
     }
   },
   {
@@ -126,64 +130,27 @@ export default {
 `
     );
 
+    const permision = ref(true);
+
     const codeObj = computed({
-      // getter
       get() {
         return eval(code.value);
       },
-      // setter
       set(newValue) {
-        if (newValue !== eval(code.value)) {
-          if (typeof newValue === "string") {
-            eval(newValue);
-          } else {
-            console.log('codeObj', newValue);
-            newValue.forEach(element => {
-              
-            });
-            const data = newValue.map((element)=>{
-              return {
-                id: element.id,
-                type: element.type,
-                label: element.label,
-                position: element.position,
-                animated: element.animated,
-                style: element.style,
-                labelBgStyle: element.labelBgStyle,
-                source: element.source,
-                taeget: element.taeget,
-                class: element.class,
-              }
-            })
-            // code.value = JSON.stringify(data, null, 2)
-            //   .replace(/"(\w+)"\s*:/g, "$1:")
-            //   .replace(/["]/g, "'");
+        if (permision.value) {
+          if (newValue !== code.value) {
+          code.value = newValue
           }
         }
       },
     });
-
-    function nodesPosition(nodes) {
-      const data = codeObj.value.map((node) => {
-        if (node.id === nodes.id) {
-          node.position = {
-            x: Math.round(nodes.position.x),
-            y: Math.round(nodes.position.y),
-          };
-        }
-        return node;
-      });
-      code.value = JSON.stringify(data, null, 2)
-        .replace(/"(\w+)"\s*:/g, "$1:")
-        .replace(/["]/g, "'");
-    }
 
     return {
       code,
       codeObj,
       extensions,
       handleReady,
-      nodesPosition,
+      permision,
       log: console.log,
     };
   },
