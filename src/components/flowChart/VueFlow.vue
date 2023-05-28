@@ -2,7 +2,9 @@
 import { VueFlow, useVueFlow } from "@vue-flow/core";
 import { Background } from '@vue-flow/background'
 import { nextTick, watch, reactive, computed, onMounted } from "vue";
-import Sidebar from "@/components/Sidebar.vue";
+import Sidebar from "@/components/flowChart/Sidebar.vue";
+import { Controls } from '@vue-flow/controls'
+import { MiniMap } from '@vue-flow/minimap'
 
 let id = 0;
 function getId() {
@@ -13,7 +15,7 @@ const props = defineProps(["modelValue"]);
 const emit = defineEmits(["update:modelValue"]);
 
 const vueFlowValue = computed({
-  get() {  
+  get() {
     return props.modelValue;
   },
   set(value) {
@@ -61,7 +63,7 @@ watch(
       vueFlowValue.value = newValue.map((node) => {
         if (node.position === undefined) {
           node.position = {
-            x: Math.random() * dimensions.value.width, 
+            x: Math.random() * dimensions.value.width,
             y: Math.random() * dimensions.value.height
           };
         }
@@ -163,7 +165,7 @@ const opts = reactive({
   bg: null,
   stroke: null,
   type: null,
-  labelBgStyle: { fill: null},
+  labelBgStyle: { fill: null },
   label: null,
   hidden: null,
 });
@@ -173,8 +175,8 @@ let edgeType = false;
 onMounted(() => {
   const nodes = getElements.value;
   nodes.map((node) => {
-    if (node.id === nodeId ){
-      if(nodeId.slice(0, 1) === "e" || nodeId.slice(0, 1) === "v") {
+    if (node.id === nodeId) {
+      if (nodeId.slice(0, 1) === "e" || nodeId.slice(0, 1) === "v") {
         edgeType = true
       } else {
         edgeType = false;
@@ -185,12 +187,12 @@ onMounted(() => {
         opts.bg = node.style.backgroundColor;
       }
       if (edgeType) {
-        if(node.labelBgStyle) {
+        if (node.labelBgStyle) {
           opts.labelBgStyle.fill = node.labelBgStyle.fill ? node.labelBgStyle.fill : "";
         }
         opts.animated = node.animated ? node.animated : false;
         opts.type = node.type ? node.type : "default";
-        if (node.style){
+        if (node.style) {
           opts.stroke = node.style.stroke ? node.style.stroke : "";
         }
       }
@@ -204,12 +206,12 @@ function selectNode() {
     return;
   }
   nodeId = selected.id;
-  if(nodeId.slice(0, 1) === "e" || nodeId.slice(0, 1) === "v") {
+  if (nodeId.slice(0, 1) === "e" || nodeId.slice(0, 1) === "v") {
     edgeType = true
   } else {
     edgeType = false;
   }
-  
+
   opts.label = selected.label ? selected.label : "";
   opts.hidden = selected.hidden;
   opts.bg = selected.style ? selected.style.backgroundColor : "";
@@ -224,26 +226,26 @@ function selectNode() {
 function updateNode(name) {
   vueFlowValue.value = vueFlowValue.value.map((node) => {
     if (node.id === nodeId) {
-      if(name === "label") {
+      if (name === "label") {
         node.label = opts.label !== "" ? opts.label : "";
       }
-      if(name === "bg") {
+      if (name === "bg") {
         node.style = { backgroundColor: opts.bg };
       }
-      if(name === "hidden") {
+      if (name === "hidden") {
         node.hidden = opts.hidden;
       }
       if (edgeType) {
-        if(name === "stroke") {
+        if (name === "stroke") {
           node.style = { stroke: opts.stroke };
         }
-        if(name === "labelBgStyle") {
+        if (name === "labelBgStyle") {
           node.labelBgStyle = { fill: opts.labelBgStyle.fill };
         }
-        if(name === "animated") {
+        if (name === "animated") {
           node.animated = opts.animated;
         }
-        if(name === "type") {
+        if (name === "type") {
           node.type = opts.type;
         }
       }
@@ -256,18 +258,9 @@ function updateNode(name) {
 <template>
   <div class="dndflow" @drop="onDrop" @click="selectNode">
     <Sidebar />
-    <VueFlow
-      v-model="vueFlowValue"
-      :only-render-visible-elements="true"
-      fit-view-on-init
-      class="basicflow"
-      :edges-updatable="true"
-      :zoom-on-double-click="false"
-      :default-viewport="{ zoom: 1.5 }"
-      :min-zoom="0.2"
-      :max-zoom="4"
-      @dragover="onDragOver"
-    >
+    <VueFlow v-model="vueFlowValue" :only-render-visible-elements="true" fit-view-on-init class="basicflow"
+      :edges-updatable="true" :zoom-on-double-click="false" :default-viewport="{ zoom: 1.5 }" :min-zoom="0.2"
+      :max-zoom="4" @dragover="onDragOver">
       <Background />
       <div class="updatenode__controls">
         <div>
@@ -308,6 +301,9 @@ function updateNode(name) {
           <input v-model="opts.animated" type="checkbox" @change="updateNode('animated')" />
         </div>
       </div>
+      <MiniMap />
+
+      <Controls />
     </VueFlow>
   </div>
 </template>
@@ -315,9 +311,14 @@ function updateNode(name) {
 <style lang="scss">
 /* import the required styles */
 @import "@vue-flow/core/dist/style.css";
-
-/* import the default theme (optional) */
 @import "@vue-flow/core/dist/theme-default.css";
+@import 'https://cdn.jsdelivr.net/npm/@vue-flow/controls@latest/dist/style.css';
+@import 'https://cdn.jsdelivr.net/npm/@vue-flow/minimap@latest/dist/style.css';
+
+.vue-flow__minimap {
+  transform: scale(75%);
+  transform-origin: bottom right;
+}
 
 .vue-flow__node {
   word-break: break-word;
@@ -327,27 +328,33 @@ function updateNode(name) {
   background: #57534e;
   color: #fffffb;
 }
+
 .basicflow.dark .vue-flow__node {
   background: #292524;
   color: #fffffb;
 }
+
 .basicflow.dark .vue-flow__controls .vue-flow__controls-button {
   background: #292524;
   fill: #fffffb;
   border-color: #fffffb;
 }
+
 .basicflow.dark .vue-flow__edge-textbg {
   fill: #292524;
 }
+
 .basicflow.dark .vue-flow__edge-text {
   fill: #fffffb;
 }
+
 .basicflow .controls {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
   gap: 8px;
 }
+
 .basicflow .controls button {
   padding: 4px;
   border-radius: 5px;
@@ -359,6 +366,7 @@ function updateNode(name) {
   justify-content: center;
   align-items: center;
 }
+
 .basicflow .controls button:hover {
   transform: scale(102%);
   transition: 0.25s all ease;
@@ -369,27 +377,32 @@ function updateNode(name) {
   display: flex;
   height: 100%;
 }
+
 .dndflow aside {
   color: #fff;
   font-weight: 700;
   border-right: 1px solid #eee;
-  padding: 15px 10px;
+  padding: 10px;
+  padding-bottom: 0;
   font-size: 12px;
   background: rgba(16, 185, 129, 0.75);
   -webkit-box-shadow: 0px 5px 10px 0px rgba(0, 0, 0, 0.3);
   box-shadow: 0 5px 10px #0000004d;
 }
-.dndflow aside .nodes > * {
+
+.dndflow aside .nodes>* {
   margin-bottom: 10px;
   cursor: grab;
   font-weight: 500;
   -webkit-box-shadow: 5px 5px 10px 2px rgba(0, 0, 0, 0.25);
   box-shadow: 5px 5px 10px 2px #00000040;
 }
+
 .dndflow aside .description {
   margin-bottom: 10px;
   text-align: center;
 }
+
 .dndflow .vue-flow-wrapper {
   flex-grow: 1;
   height: 100%;
@@ -417,27 +430,30 @@ function updateNode(name) {
   padding: 8px;
   padding-bottom: 0;
 
-  > div {
+  >div {
     margin-bottom: 8px;
     display: flex;
     align-items: center;
   }
 }
+
 .updatenode__controls label {
   display: blocK;
   margin-right: 4px;
   margin-left: 8px;
 }
+
 .updatenode__controls input {
   padding: 2px;
   border-radius: 5px;
 }
+
 .updatenode__bglabel {
   margin: 0 4px;
 }
+
 .updatenode__checkboxwrapper {
   display: flex;
   justify-content: center;
   align-items: center;
-}
-</style>
+}</style>

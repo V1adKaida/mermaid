@@ -1,20 +1,10 @@
 <template>
-  <!-- {{ codeObj }} -->
   <div class="wrapper">
     <div>
-      <Codemirror
-        :modelValue="code"
-        @update:modelValue="(newValue) => (code = newValue)"
-        placeholder="Code goes here..."
-        :style="{ height: '100%' }"
-        :autofocus="true"
-        :indent-with-tab="true"
-        :tab-size="2"
-        :extensions="extensions"
-        @ready="handleReady"
-        @focus="permision = false"
-        @blur="permision = true"
-      />
+      <Codemirror :modelValue="flowStore.selectedFlow"
+        @update:modelValue="(newValue) => flowStore.updateFlow(newValue)"
+        placeholder="Code goes here..." :style="{ height: '100%' }" :autofocus="true" :indent-with-tab="true"
+        :tab-size="2" :extensions="extensions" @ready="handleReady" @focus="permision = false" @blur="permision = true" />
     </div>
     <div>
       <VueFlow v-model="codeObj"></VueFlow>
@@ -22,166 +12,77 @@
   </div>
 </template>
 
-<script>
+<script setup>
 import { ref, shallowRef, computed } from "vue";
 import { Codemirror } from "vue-codemirror";
 import { json } from "@codemirror/lang-json";
 import { oneDark } from "@codemirror/theme-one-dark";
-import VueFlow from "../components/VueFlow.vue";
+import VueFlow from "@/components/flowChart/VueFlow.vue";
+import { useFlowStore } from '@/stores/flow';
+import { useDatabaseList } from 'vuefire'
+import { getDatabase, ref as dbRef } from "firebase/database";
+const flowStore = useFlowStore();
+const db = getDatabase();
 
-export default {
-  name: "HomeView",
-  components: {
-    VueFlow,
-    Codemirror,
-  },
-  setup() {
-    const extensions = [json(), oneDark];
+flowStore.flows = useDatabaseList(dbRef(db, `users/${flowStore.userId}/flows`))
 
-    // Codemirror EditorView instance ref
-    const view = shallowRef();
-    const handleReady = (payload) => {
-      view.value = payload.view;
-    };
+const extensions = [json(), oneDark];
 
-    const code = ref(
-      `[
-  {
-    id: '1',
-    type: 'input',
-    label: 'Node 1',
-    position: {
-      x: 250,
-      y: 1
-    },
-    class: 'light'
+// Codemirror EditorView instance ref
+const view = shallowRef();
+const handleReady = (payload) => {
+  view.value = payload.view;
+};
+
+const permision = ref(true);
+
+const codeObj = computed({
+  get() {
+    if (flowStore.selectedFlow) {
+      const validator = () => {
+        try {
+          eval(flowStore.selectedFlow);
+          return true;
+        } catch (e) {
+          return false;
+        }
+      };
+
+      if (validator() === true) {
+        const validateId = eval(flowStore.selectedFlow).every((item) => {
+          return item.id;
+        });
+
+        if (validateId) {
+          return eval(flowStore.selectedFlow);
+        }
+      }
+    }
+
   },
-  {
-    id: '2',
-    type: 'output',
-    label: 'Node 2',
-    position: {
-      x: 100,
-      y: 100
-    },
-    class: 'light'
-  },
-  {
-    id: '3',
-    label: 'Node 3',
-    position: {
-      x: 400,
-      y: 100
-    },
-    class: 'light'
-  },
-  {
-    id: '4',
-    label: 'Node 4',
-    position: {
-      x: 150,
-      y: 200
-    },
-    class: 'light'
-  },
-  {
-    id: '5',
-    type: 'output',
-    label: 'Node 5',
-    position: {
-      x: 300,
-      y: 300
-    },
-    class: 'light'
-  },
-  {
-    id: 'e1-2',
-    source: '1',
-    target: '2',
-    animated: true
-  },
-  {
-    id: 'e1-3',
-    label: 'edge with arrowhead',
-    source: '1',
-    target: '3'
-  },
-  {
-    id: 'e4-5',
-    type: 'step',
-    label: 'step-edge',
-    source: '4',
-    target: '5',
-    style: {
-      stroke: '#ffa500'
-    },
-    labelBgStyle: {
-      fill: '#ffa500'
+  set(newValue) {
+    if (permision.value) {
+      if (newValue !== flowStore.selectedFlow) {
+        flowStore.updateFlow(newValue);
+      }
     }
   },
-  {
-    id: 'e3-4',
-    type: 'smoothstep',
-    label: 'smoothstep-edge',
-    source: '3',
-    target: '4'
-  }
-]
-`
-    );
-
-    const permision = ref(true);
-
-    const codeObj = computed({
-      get() {
-        const validator = () => {
-          try {
-            eval(code.value);
-            return true;
-          } catch (e) {
-            return false;
-          }
-        };
-
-        if (validator() === true) {
-          const validateId = eval(code.value).every((item) => {
-            return item.id;
-          });
-
-          if (validateId) {
-            return eval(code.value);
-          }
-        }
-      },
-      set(newValue) {
-        if (permision.value) {
-          if (newValue !== code.value) {
-            code.value = newValue;
-          }
-        }
-      },
-    });
-
-    return {
-      code,
-      codeObj,
-      extensions,
-      handleReady,
-      permision,
-      log: console.log,
-    };
-  },
-};
+});
 </script>
 
 <style lang="scss">
 .wrapper {
   display: flex;
-  margin: 0 -15px;
-  height: 100%;
-  > div {
-    padding: 0 15px;
-    width: 50%;
+  max-width: 1600px;
+  height: calc(100vh - var(--header-height));
+
+  >div {
+    width: 100%;
+
+    &:first-child {
+      width: 400px;
+      min-width: 400px;
+    }
   }
 }
 
