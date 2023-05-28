@@ -58,15 +58,17 @@ const codeObj = computed({
         }
       }
     }
+  },
 
-  },
   set(newValue) {
-    if (permision.value) {
-      if (newValue !== flowStore.selectedFlow) {
-        flowStore.updateFlow(newValue);
-      }
+    const hasPermission = permision.value;
+    const isDifferentFlow = newValue !== flowStore.selectedFlow;
+
+    if (hasPermission && isDifferentFlow) {
+      flowStore.updateFlow(newValue);
     }
-  },
+  }
+
 });
 </script>
 
