@@ -1,17 +1,21 @@
 import { defineStore } from 'pinia'
-import { getDatabase, ref, child, push, update, set, remove } from "firebase/database";
+import { getDatabase, ref, update, set, remove, } from "firebase/database";
 
 export const useFlowStore = defineStore('flow', {
   state: () => {
     return {
       user: null,
       flows: [],
-      selectedFlowId: 0,
+      selectedFlowId: '0',
     }
   },
   getters: {
     selectedFlow: (state) => {
-      return state.flows.find((flow) => Number(flow.id) === Number(state.selectedFlowId))?.code
+      if (state.flows.length) {
+        return state.flows.find((flow) => Number(flow.id) === Number(state.selectedFlowId))?.code
+      } else {
+        return null
+      }
     },
     userId: (state) => {
       return state.user?.uid
@@ -19,9 +23,9 @@ export const useFlowStore = defineStore('flow', {
   },
   actions: {
     newFlow(name) {
-      const db = getDatabase();
+      const database = getDatabase();
       const id = typeof this.flows[0] !== 'undefined' ? Number(this.flows[this.flows.length - 1].id) + 1 : 0
-      set(ref(db, `users/${this.userId}/flows/${id}`), {
+      set(ref(database, `users/${this.userId}/flows/${id}`), {
         id: id,
         name: name,
         code: `[
@@ -36,19 +40,19 @@ export const useFlowStore = defineStore('flow', {
   }
 ]`
       });
-
-      this.selectedFlowId = id
+      console.log(this.flows.length)
+      this.selectedFlowId = `${id}`
     },
     updateFlow(newValue) {
-      const db = getDatabase();
+      const database = getDatabase();
       const updates = {}
       updates[`users/${this.userId}/flows/${this.selectedFlowId}/code`] = newValue
-      update(ref(db), updates)
+      update(ref(database), updates)
     },
-    removeFlow(id) {
-      const db = getDatabase();
-      remove(ref(db, `users/${this.userId}/flows/${id}`))
-      this.selectedFlowId = this.flows[0].id
+    removeFlow(flowId) {
+      const database = getDatabase();
+      remove(ref(database, `users/${this.userId}/flows/${flowId}`));
+      this.flows.length > 0 ? this.selectedFlowId = `${flowId - 1}` : this.selectedFlowId = ``
     },
     reset() {
       this.$reset()
