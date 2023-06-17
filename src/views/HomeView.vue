@@ -63,7 +63,6 @@ const codeObj = computed({
   set(newValue) {
     const hasPermission = permision.value;
     const isDifferentFlow = newValue !== flowStore.selectedFlow;
-
     if (hasPermission && isDifferentFlow) {
       flowStore.updateFlow(newValue);
     }

@@ -11,7 +11,7 @@ export const useFlowStore = defineStore('flow', {
   },
   getters: {
     selectedFlow: (state) => {
-      if (state.flows.length) {
+      if (state.flows.length > 0) {
         return state.flows.find((flow) => Number(flow.id) === Number(state.selectedFlowId))?.code
       } else {
         return null
@@ -46,12 +46,16 @@ export const useFlowStore = defineStore('flow', {
     updateFlow(newValue) {
       const database = getDatabase();
       const updates = {}
+      if (!this.selectedFlowId) {
+        this.reset()
+        return
+      }
       updates[`users/${this.userId}/flows/${this.selectedFlowId}/code`] = newValue
       update(ref(database), updates)
     },
     removeFlow(flowId) {
       const database = getDatabase();
-      remove(ref(database, `users/${this.userId}/flows/${flowId}`));
+      remove(ref(database, `users/${this.userId}/flows/${flowId}`))
       this.flows.length > 0 ? this.selectedFlowId = `${flowId - 1}` : this.selectedFlowId = ``
     },
     reset() {

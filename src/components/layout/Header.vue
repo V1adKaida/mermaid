@@ -10,7 +10,7 @@
         </select>
         <input @keydown.enter="newFlow()" class="input" type="text" v-model="name" placeholder="New flow name" />
         <button :disabled="!name" @click="newFlow()">New Flow</button>
-        <button class="remove" @click="remove(flowStore.selectedFlowId)">Remove</button>
+        <button v-if="flowStore.flows.length" class="remove" @click="removeFlow(flowStore.selectedFlowId)">Remove</button>
       </div>
 
       <div class="user">
@@ -53,7 +53,7 @@ const newFlow = () => {
   toast('Flow created!', { type: 'success' })
 }
 
-const remove = (id) => {
+const removeFlow = (id) => {
   flowStore.removeFlow(id)
   toast('Flow removed!', { type: 'success' })
 }
