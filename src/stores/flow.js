@@ -56,7 +56,7 @@ export const useFlowStore = defineStore('flow', {
     removeFlow(flowId) {
       const database = getDatabase();
       remove(ref(database, `users/${this.userId}/flows/${flowId}`))
-      this.flows.length > 0 ? this.selectedFlowId = `${flowId - 1}` : this.selectedFlowId = ``
+      this.flows.length > 0 ? this.selectedFlowId = `${this.flows[0].id}` : this.selectedFlowId = ``
     },
     reset() {
       this.$reset()

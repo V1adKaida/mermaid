@@ -1,8 +1,7 @@
 <template>
-  <div class="wrapper">
+  <div class="wrapper" v-if="flowStore.flows.length > 0">
     <div>
-      <Codemirror :modelValue="flowStore.selectedFlow"
-        @update:modelValue="(newValue) => flowStore.updateFlow(newValue)"
+      <Codemirror :modelValue="flowStore.selectedFlow" @update:modelValue="(newValue) => flowStore.updateFlow(newValue)"
         placeholder="Code goes here..." :style="{ height: '100%' }" :autofocus="true" :indent-with-tab="true"
         :tab-size="2" :extensions="extensions" @ready="handleReady" @focus="permision = false" @blur="permision = true" />
     </div>
@@ -21,6 +20,7 @@ import VueFlow from "@/components/flowChart/VueFlow.vue";
 import { useFlowStore } from '@/stores/flow';
 import { useDatabaseList } from 'vuefire'
 import { getDatabase, ref as dbRef } from "firebase/database";
+
 const flowStore = useFlowStore();
 const db = getDatabase();
 
@@ -67,14 +67,12 @@ const codeObj = computed({
       flowStore.updateFlow(newValue);
     }
   }
-
 });
 </script>
 
 <style lang="scss">
 .wrapper {
   display: flex;
-  max-width: 1600px;
   height: calc(100vh - var(--header-height));
 
   >div {
